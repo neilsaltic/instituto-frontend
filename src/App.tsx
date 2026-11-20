@@ -116,7 +116,7 @@ export default function App() {
         <Route
           path="/tareas"
           element={
-            <RoleRoute allowedRoles={["ESTUDIANTE", "PROFESOR"]}>
+            <RoleRoute allowedRoles={["ESTUDIANTE", "PROFESOR", "ADMINISTRADOR"]}>
               <TareasPage />
             </RoleRoute>
           }

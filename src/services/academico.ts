@@ -35,6 +35,21 @@ export interface GrupoAcademico {
   disponibles?: number;
 }
 
+export interface GrupoInscrito {
+  detalleInscripcionId: number;
+  grupo: {
+    id: number;
+    nombre: string;
+    cupoMaximo?: number;
+    horarios: HorarioGrupo[];
+    profesor?: {
+      usuario?: { nombre?: string; apellido?: string };
+    };
+  };
+  periodo?: { nombre: string };
+  materia?: { id: number; nombre: string; codigo?: string };
+}
+
 export interface CrearPeriodo {
   nombre: string;
   fechaInicio: string;
@@ -68,14 +83,15 @@ export interface CrearGrupo {
 
 function listar<T>(data: unknown): T[] {
   if (Array.isArray(data)) return data as T[];
-  if (data && typeof data === "object" && "data" in data) {
-    const nested = (data as { data: unknown }).data;
-    if (Array.isArray(nested)) return nested as T[];
-    if (nested && typeof nested === "object" && "items" in nested) {
-      const items = (nested as { items: unknown }).items;
-      if (Array.isArray(items)) return items as T[];
+  if (!data || typeof data !== "object") return [];
+  const record = data as Record<string, unknown>;
+  for (const key of ["data", "items", "grupos"]) {
+    if (record[key] !== undefined) {
+      const nested = listar<T>(record[key]);
+      if (nested.length > 0) return nested;
     }
   }
+  if ("id" in record || "detalleInscripcionId" in record) return [data as T];
   return [];
 }
 
@@ -98,6 +114,14 @@ export const gruposService = {
       params: periodoId ? { periodoId } : undefined,
     });
     return listar<GrupoAcademico>(response.data);
+  },
+  getMisGrupos: async (): Promise<GrupoAcademico[]> => {
+    const response = await api.get("/grupos/mis-grupos");
+    return listar<GrupoAcademico>(response.data);
+  },
+  getMisGruposEstudiante: async (): Promise<GrupoInscrito[]> => {
+    const response = await api.get("/grupos/mis-grupos/estudiante");
+    return listar<GrupoInscrito>(response.data);
   },
   crear: async (datos: CrearGrupo): Promise<void> => {
     await api.post("/grupos", datos);

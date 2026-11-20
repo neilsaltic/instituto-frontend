@@ -11,6 +11,7 @@ import {
 } from "../services/academico";
 import { materiasService } from "../services/materias";
 import type { Materia } from "../services/materias";
+import { usuariosService } from "../services/usuarios";
 import { mensajeError } from "../lib/errores";
 
 type ProfesorOption = { id: number; nombre: string };
@@ -38,14 +39,6 @@ function registro(value: unknown): Registro | null {
 function numero(value: unknown): number | undefined {
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-function lista(value: unknown): unknown[] {
-  const root = registro(value);
-  if (Array.isArray(value)) return value;
-  if (Array.isArray(root?.data)) return root.data;
-  if (Array.isArray(root?.items)) return root.items;
-  return [];
 }
 
 function horariosDe(value: unknown): CrearHorario[] {
@@ -183,24 +176,23 @@ export function AcademicoAdminPage() {
     if (!selectedMateria) return;
 
     let active = true;
-    materiasService.getProfesores(selectedMateria)
+    usuariosService.getProfesores()
       .then((response) => {
         if (!active) return;
-        const options = lista(response).flatMap((entry) => {
+        const options = response.flatMap((entry) => {
           const item = registro(entry);
           const profile = registro(item?.perfilProfesor);
-          const id = numero(profile?.id ?? item?.id);
-          const name = nombreProfesor(entry);
+          const profileUser = registro(profile?.usuario);
+          const id = numero(profile?.id ?? (item && "usuarioId" in item ? item.id : undefined));
+          const name = nombreProfesor(profile ?? entry) || nombreProfesor(profileUser) || nombreProfesor(entry);
           return id && name ? [{ id, nombre: name }] : [];
         });
         setProfesores(options);
-        if (profesorId && !options.some((teacher) => teacher.id === Number(profesorId))) {
-          setProfesorId("");
-        }
       })
       .catch((loadError: unknown) => {
         if (active) {
-          setErrorProfesores(mensajeError(loadError, "No se pudieron cargar los docentes asignados."));
+          setProfesores([]);
+          setErrorProfesores(mensajeError(loadError, "No se pudieron cargar los docentes disponibles."));
         }
       })
       .finally(() => {
@@ -210,7 +202,7 @@ export function AcademicoAdminPage() {
     return () => {
       active = false;
     };
-  }, [grupoMateriaId, profesorId]);
+  }, [grupoMateriaId]);
 
   const limpiarPeriodo = () => {
     setPeriodoId(null);
@@ -481,7 +473,7 @@ export function AcademicoAdminPage() {
               </label>
               <label>Docente asignado
                 <select required value={profesorId} onChange={(event) => setProfesorId(event.target.value)} disabled={cargandoProfesores || profesores.length === 0}>
-                  <option value="">{cargandoProfesores ? "Cargando docentes..." : "Selecciona un docente asignado"}</option>
+                  <option value="">{cargandoProfesores ? "Cargando docentes..." : profesores.length === 0 ? "No hay docentes disponibles" : "Selecciona un docente"}</option>
                   {profesores.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.nombre}</option>)}
                 </select>
               </label>
@@ -502,7 +494,7 @@ export function AcademicoAdminPage() {
                   <button className="icon-button" type="button" aria-label="Quitar horario" disabled={horarios.length === 1} onClick={() => setHorarios((items) => items.filter((_, i) => i !== index))}><X size={15} /></button>
                 </div>
               ))}
-              <button className="button button-primary" disabled={guardando || cargandoProfesores}><Save size={14} />{grupoId ? "Guardar grupo y horarios" : "Crear grupo y horarios"}</button>
+              <button className="button button-primary" disabled={guardando || cargandoProfesores || profesores.length === 0}><Save size={14} />{grupoId ? "Guardar grupo y horarios" : "Crear grupo y horarios"}</button>
             </form>
             <div className="academic-record-list academic-group-list">
               {grupos.map((group) => (

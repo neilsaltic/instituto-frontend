@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight, CalendarDays, Clock3, MapPin, RotateCcw } from '
 import { useEffect, useState } from 'react'
 import { PageHeading } from '../components/ui/PageHeading'
 import { mensajeError } from '../lib/errores'
+import { gruposService, periodosService } from '../services/academico'
 import { matriculasService } from '../services/matriculas'
 import { useAuthStore } from '../store/useAuthStore'
 
@@ -29,6 +30,7 @@ function lista(value: unknown): unknown[] {
   if (Array.isArray(item?.matriculas)) return item.matriculas
   if (Array.isArray(item?.grupos)) return item.grupos
   if (item?.data && typeof item.data === 'object') return lista(item.data)
+  if (Array.isArray(item?.horarios) && item.id !== undefined) return [value]
   return []
 }
 
@@ -72,7 +74,33 @@ function normalizarHorarioInscrito(value: unknown): HorarioInscrito[] {
   })
 }
 
-function StudentCalendar() {
+function idsGruposInscritos(value: unknown): Set<number> {
+  const ids = new Set<number>()
+  const visitar = (entry: unknown) => {
+    const item = registro(entry)
+    if (!item) return
+    const group = registro(item.grupo) ?? registro(item.grupoDetalle)
+    if (group) {
+      const id = Number(group.id)
+      if (Number.isSafeInteger(id) && id > 0) ids.add(id)
+      visitar(group)
+    } else if (item.grupoId !== undefined) {
+      const id = Number(item.grupoId)
+      if (Number.isSafeInteger(id) && id > 0) ids.add(id)
+    } else if (Array.isArray(item.horarios) && item.id !== undefined) {
+      const id = Number(item.id)
+      if (Number.isSafeInteger(id) && id > 0) ids.add(id)
+    }
+
+    for (const key of ['grupos', 'matriculas', 'materias'] as const) {
+      if (Array.isArray(item[key])) item[key].forEach(visitar)
+    }
+  }
+  lista(value).forEach(visitar)
+  return ids
+}
+
+function StudentCalendar({ profesor = false }: { profesor?: boolean }) {
   const [horarios, setHorarios] = useState<HorarioInscrito[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -80,12 +108,34 @@ function StudentCalendar() {
 
   useEffect(() => {
     let active = true
-    matriculasService.getMisMaterias()
-      .then((data) => {
-        if (active) setHorarios(normalizarHorarioInscrito(data))
+    const cargarHorario = async () => {
+      if (profesor) {
+        return normalizarHorarioInscrito(await gruposService.getMisGrupos())
+      }
+
+      const data = await matriculasService.getMisMaterias()
+        const enrolledGroupIds = idsGruposInscritos(data)
+        if (enrolledGroupIds.size === 0) {
+          return normalizarHorarioInscrito(data)
+        }
+
+        const periods = await periodosService.getTodos()
+        const activePeriod = periods.find((period) => period.activo)
+        const groups = await gruposService.getTodos(activePeriod?.id)
+        const schedules = normalizarHorarioInscrito(
+          groups.filter((group) => enrolledGroupIds.has(group.id)),
+        )
+        return schedules.length > 0 ? schedules : normalizarHorarioInscrito(data)
+    }
+
+    cargarHorario()
+      .then((schedule) => {
+        if (active) setHorarios(schedule)
       })
       .catch((loadError: unknown) => {
-        if (active) setError(mensajeError(loadError, 'No se pudo cargar tu horario semanal.'))
+        if (active) setError(mensajeError(loadError, profesor
+          ? 'No se pudo cargar el horario de tus grupos asignados.'
+          : 'No se pudo cargar tu horario semanal.'))
       })
       .finally(() => {
         if (active) setCargando(false)
@@ -93,7 +143,7 @@ function StudentCalendar() {
     return () => {
       active = false
     }
-  }, [retry])
+  }, [profesor, retry])
 
   const reintentar = () => {
     setCargando(true)
@@ -103,16 +153,26 @@ function StudentCalendar() {
 
   return (
     <>
-      <PageHeading eyebrow="ORGANIZACIÓN" title="Mi horario" description="Consulta los grupos en los que estás inscrito durante la semana." />
+      <PageHeading
+        eyebrow="ORGANIZACIÓN"
+        title={profesor ? "Mi horario de clases" : "Mi horario"}
+        description={profesor
+          ? "Consulta los días y horarios de los grupos que tienes asignados."
+          : "Consulta los grupos en los que estás inscrito durante la semana."}
+      />
       {cargando ? (
-        <div className="panel academic-panel">Cargando tus grupos inscritos...</div>
+        <div className="panel academic-panel">{profesor ? "Cargando tus grupos asignados..." : "Cargando tus grupos inscritos..."}</div>
       ) : error ? (
         <div className="panel academic-panel academic-load-error" role="alert">
           <p>{error}</p>
           <button className="button button-outline" onClick={reintentar}><RotateCcw size={14} /> Reintentar</button>
         </div>
       ) : horarios.length === 0 ? (
-        <div className="panel academic-panel academic-empty">Todavía no tienes grupos inscritos con horario para mostrar.</div>
+        <div className="panel academic-panel academic-empty">
+          {profesor
+            ? "Todavía no tienes grupos asignados con horario para mostrar."
+            : "Todavía no tienes grupos inscritos con horario para mostrar."}
+        </div>
       ) : (
         <section className="panel student-weekly-schedule" aria-label="Horario semanal">
           {diasSemana.map((day) => {
@@ -163,6 +223,7 @@ export function CalendarPage() {
   const monthLabel = new Intl.DateTimeFormat('es', { month: 'long', year: 'numeric' }).format(weekStart)
   const periodLabel = `del ${displayedDays[0].getDate()} al ${displayedDays[4].getDate()}`
   if (role === 'ESTUDIANTE') return <StudentCalendar />
+  if (role === 'PROFESOR') return <StudentCalendar profesor />
   return (
     <>
       <PageHeading eyebrow="ORGANIZACIÓN" title="Calendario" description="Consulta los horarios de clases y eventos académicos." action={<button className="button button-primary"><CalendarDays size={16} /> Nuevo evento</button>} />

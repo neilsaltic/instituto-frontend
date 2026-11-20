@@ -772,7 +772,10 @@ a { color: inherit; text-decoration: none; }
 .academic-form textarea:focus { border-color: #a7697e; box-shadow: 0 0 0 3px #8f294c12; }
 .task-panel { min-width: 0; padding: 18px; }
 .task-teacher-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; gap: 16px; }
+.task-student-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 16px; }
 .task-teacher-column { display: grid; gap: 16px; }
+.task-group-select { display: grid; gap: 5px; padding-top: 14px; color: #625c64; font-size: 10px; font-weight: 600; }
+.task-group-select select { width: 100%; height: 36px; padding: 0 9px; color: #454048; border: 1px solid #eae7e6; border-radius: 6px; background: white; font-size: 11px; }
 .task-api-limitation { color: #805c20; border-color: #f0e2c4; background: #fffaf0; }
 .task-record { display: flex; width: 100%; align-items: center; gap: 10px; padding: 11px 8px; color: #514a52; border: 0; border-bottom: 1px solid #f0eeed; background: transparent; text-align: left; }
 .task-record:hover, .task-record.is-selected { background: #fbf5f7; }
@@ -781,19 +784,24 @@ a { color: inherit; text-decoration: none; }
 .task-record-copy strong, .task-record-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-record-copy strong { font-size: 10px; }
 .task-record-copy small { margin-top: 4px; color: #8d8790; font-size: 9px; }
+.task-record-copy p { margin: 5px 0 0; color: #706a72; font-size: 9px; line-height: 1.45; white-space: normal; }
 .task-delivery-list { display: grid; }
 .task-delivery { display: grid; gap: 13px; padding: 14px 0; border-bottom: 1px solid #f0eeed; }
 .task-delivery-student { min-width: 0; }
 .task-delivery-student strong { color: #474149; font-size: 11px; }
 .task-delivery-student p { margin: 6px 0; color: #706a72; font-size: 10px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .task-delivery-student a { color: #812744; font-size: 10px; text-decoration: underline; }
+.task-status { display: inline-flex; margin-top: 6px; padding: 4px 7px; border-radius: 999px; font-size: 9px; font-weight: 700; }
+.task-status.is-no-entregada { color: #8a4d16; background: #fff2dd; }
+.task-status.is-pendiente-de-revision { color: #805c20; background: #fff8df; }
+.task-status.is-calificada { color: #276344; background: #e8f6ee; }
 .task-grade-form { display: flex; align-items: end; gap: 8px; }
 .task-grade-form label { display: grid; flex: 0 1 150px; gap: 5px; color: #625c64; font-size: 9px; font-weight: 600; }
 .task-grade-form input { width: 100%; height: 34px; padding: 0 8px; color: #454048; border: 1px solid #eae7e6; border-radius: 6px; }
 .task-grade-form .button { height: 34px; }
 
 @media (max-width: 900px) {
-  .task-teacher-layout { grid-template-columns: 1fr; }
+  .task-teacher-layout, .task-student-layout { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 650px) {

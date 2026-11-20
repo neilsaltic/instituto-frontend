@@ -8,13 +8,18 @@ export interface CrearTarea {
 }
 
 export interface EntregarTarea {
-  estudiantePerfilId: number;
   tareaId: number;
   contenidoTexto?: string;
   archivoUrl?: string;
+  archivo?: File;
 }
 
 export const tareasService = {
+  getMisTareas: async (): Promise<unknown> => {
+    const response = await api.get("/tareas/mis-tareas");
+    return response.data;
+  },
+
   crear: async (datos: CrearTarea): Promise<void> => {
     await api.post("/tareas", datos);
   },
@@ -29,8 +34,20 @@ export const tareasService = {
     return response.data;
   },
 
+  getPadronGrupo: async (grupoId: number, tareaId: number): Promise<unknown> => {
+    const response = await api.get(`/tareas/grupo/${grupoId}/estudiantes`, {
+      params: { tareaId },
+    });
+    return response.data;
+  },
+
   entregar: async (datos: EntregarTarea): Promise<unknown> => {
-    const response = await api.post("/tareas/entregar", datos);
+    const formData = new FormData();
+    formData.append("tareaId", String(datos.tareaId));
+    if (datos.contenidoTexto) formData.append("contenidoTexto", datos.contenidoTexto);
+    if (datos.archivoUrl) formData.append("archivoUrl", datos.archivoUrl);
+    if (datos.archivo) formData.append("archivo", datos.archivo);
+    const response = await api.post("/tareas/entregar", formData);
     return response.data;
   },
 

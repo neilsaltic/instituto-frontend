@@ -22,6 +22,7 @@ const adminLinks = [
   { label: "Docentes", to: "/docentes", icon: GraduationCap },
   { label: "Recepcionistas", to: "/recepcionistas", icon: UserPlus },
   { label: "Calendario", to: "/calendario", icon: CalendarDays },
+  { label: "Tareas", to: "/tareas", icon: ClipboardList },
   { label: "Pagos", to: "/pagos", icon: CreditCard },
 ];
 
